@@ -96,10 +96,14 @@ def send_radar(in_session, rollcall_id):
 
     res_1 = in_session.put(url, json=payload(lat_1, lon_1), headers=headers)
     data_1 = res_1.json()
+
+    if res_1.status_code == 200:
+        return True
+
     res_2 = in_session.put(url, json=payload(lat_2, lon_2), headers=headers)
     data_2 = res_2.json()
 
-    if res_1.status_code == 200 or res_2.status_code == 200:
+    if res_2.status_code == 200:
         return True
 
     distance_1 = data_1.get("distance")
