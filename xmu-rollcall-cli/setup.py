@@ -3,7 +3,16 @@ import pathlib
 
 # Read the contents of README file
 here = pathlib.Path(__file__).parent.resolve()
-long_description = (here / "README.md").read_text(encoding="utf-8")
+readme_path = here / "README.md"
+if not readme_path.exists():
+    # Allow using repository root README when installing from subdirectory
+    parent_readme = here.parent / "README.md"
+    readme_path = parent_readme if parent_readme.exists() else None
+
+if readme_path is not None:
+    long_description = readme_path.read_text(encoding="utf-8")
+else:
+    long_description = "XMU Rollcall Bot CLI - Automated rollcall monitoring and answering for Xiamen University Tronclass"
 
 setup(
     name="xmu-rollcall-cli",
