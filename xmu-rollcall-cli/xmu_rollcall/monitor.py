@@ -8,6 +8,7 @@ from xmulogin import xmulogin
 from .utils import clear_screen, save_session, load_session, verify_session
 from .rollcall_handler import process_rollcalls
 from .config import get_cookies_path
+from .wx_send import wx_send
 
 base_url = "https://lnt.xmu.edu.cn"
 interval = 1
@@ -45,6 +46,14 @@ CYAN_TEXT = f"{Colors.OKCYAN}"
 GREEN_TEXT = f"{Colors.OKGREEN}"
 YELLOW_TEXT = f"{Colors.WARNING}"
 END = Colors.ENDC
+
+
+def notify_wx(content, title="登录通知"):
+    """Send Pushplus notification but never crash the monitor."""
+    try:
+        wx_send(content, title=title)
+    except Exception as exc:
+        print(f"{Colors.WARNING}通知发送失败：{exc}{Colors.ENDC}")
 
 def get_terminal_width():
     """获取终端宽度"""
@@ -206,6 +215,7 @@ def start_monitor(account):
     PASSWORD = account['password']
     ACCOUNT_ID = account.get('id', 1)
     ACCOUNT_NAME = account.get('name', '')
+    ACCOUNT_LABEL = ACCOUNT_NAME or USERNAME
     # LATITUDE = account.get('latitude', 0)
     # LONGITUDE = account.get('longitude', 0)
 
@@ -231,11 +241,17 @@ def start_monitor(account):
             profile = verify_session(session_candidate)
             if profile:
                 session = session_candidate
+                # TODO: Handle login success event (e.g., notify user/UI hook).
                 print_login_status("Session restored successfully", True)
+                notify_wx(f"账号{ACCOUNT_LABEL}缓存会话恢复成功，已登录。")
             else:
+                # TODO: Handle login failure event (session expired path).
                 print_login_status("Session expired, will re-login", False)
+                notify_wx(f"账号{ACCOUNT_LABEL}缓存会话已失效，正在重新登录。")
         else:
+            # TODO: Handle login failure event (cached session unusable).
             print_login_status("Failed to load session", False)
+            notify_wx(f"账号{ACCOUNT_LABEL}缓存会话读取失败，将尝试重新登录。")
 
     if not session:
         print(f"{Colors.OKCYAN}[Step 2/3]{Colors.ENDC} Logging in with credentials...")
@@ -243,16 +259,22 @@ def start_monitor(account):
         session = xmulogin(type=3, username=USERNAME, password=PASSWORD)
         if session:
             save_session(session, cookies_path)
+            # TODO: Handle login success event (fresh login path).
             print_login_status("Login successful", True)
+            notify_wx(f"账号{ACCOUNT_LABEL}凭据登录成功。")
         else:
+            # TODO: Handle login failure event (credentials invalid).
             print_login_status("Login failed. Please check your credentials", False)
+            notify_wx(f"账号{ACCOUNT_LABEL}登录失败，请检查用户名或密码。")
             time.sleep(5)
             sys.exit(1)
 
     print(f"{Colors.OKCYAN}[Step 3/3]{Colors.ENDC} Fetching user profile...")
     # profile = session.get(f"{base_url}/api/profile", headers=headers).json()
     # name = profile["name"]
+    # TODO: Handle login success event (post-profile fetch confirmation).
     print_login_status(f"Welcome, {ACCOUNT_NAME}", True)
+    notify_wx(f"账号{ACCOUNT_LABEL}登录完成，开始监听签到。")
 
     print(f"\n{Colors.OKGREEN}{Colors.BOLD}Initialization complete{Colors.ENDC}")
     print(f"\n{Colors.GRAY}Starting monitor in 3 seconds...{Colors.ENDC}")
